@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --gold-primary:   #C9A84C;
+    --gold-bright:    #F0D080;
+    --gold-dark:      #2A2200;
+    --noir-primary:   #0A0A0A;
+    --noir-surface:   #1A1A1A;
+    --noir-elevated:  #222222;
+  }
+
+  body {
+    @apply bg-noir-400 text-gold-200 font-body;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track { background: #111; }
+  ::-webkit-scrollbar-thumb {
+    background: #2A2200;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #C9A84C; }
+}
+
+@layer components {
+  /* Boutons */
+  .btn-gold {
+    @apply bg-gold-gradient text-noir-900 font-display tracking-widest
+           px-6 py-3 rounded-lg transition-all duration-200
+           hover:opacity-90 hover:scale-[1.02]
+           active:scale-[0.98] active:opacity-80
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-outline-gold {
+    @apply border border-gold-400 text-gold-400 font-display tracking-widest
+           px-6 py-3 rounded-lg transition-all duration-200 bg-transparent
+           hover:bg-gold-400 hover:text-noir-900
+           active:scale-[0.98]
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply text-gold-400/70 font-body text-sm
+           px-4 py-2 rounded-lg transition-all duration-200
+           hover:bg-gold-400/10 hover:text-gold-400;
+  }
+
+  /* Cards UI */
+  .panel {
+    @apply bg-noir-50 rounded-xl p-4;
+    border: 1px solid rgba(42,34,0,0.5);
+  }
+
+  .panel-elevated {
+    @apply bg-[#1C1C1C] rounded-xl p-4 shadow-gold-sm;
+    border: 1px solid rgba(42,34,0,0.5);
+  }
+
+  /* Inputs */
+  .input-gold {
+    @apply w-full bg-noir-100 rounded-lg
+           px-4 py-2.5 text-gold-200 font-body text-sm
+           focus:outline-none focus:border-gold-400
+           transition-colors duration-200;
+    border: 1px solid rgba(42,34,0,0.6);
+  }
+  .input-gold::placeholder { color: rgba(201,168,76,0.3); }
+  .input-gold:focus {
+    ring: 1px rgba(201,168,76,0.3);
+    box-shadow: 0 0 0 1px rgba(201,168,76,0.3);
+  }
+
+  /* Label rareté */
+  .rarity-badge {
+    @apply font-mono text-[10px] tracking-widest px-2 py-0.5 rounded;
+  }
+
+  .rarity-common    { @apply rarity-badge bg-gray-700 text-gray-300; }
+  .rarity-rare      { @apply rarity-badge bg-blue-900 text-blue-300; }
+  .rarity-epic      { @apply rarity-badge bg-purple-900 text-purple-300; }
+  .rarity-legendary { @apply rarity-badge bg-yellow-900 text-gold-200 shadow-gold-sm; }
+
+  /* Heading display */
+  .heading-display {
+    @apply font-display tracking-widest text-gold-200;
+  }
+
+  /* Label de champ formulaire */
+  .field-label {
+    @apply block font-mono text-[10px] tracking-widest mb-1.5;
+    color: rgba(201,168,76,0.5);
+  }
+
+  /* Divider or */
+  .divider-gold {
+    @apply w-12 h-px bg-gold-400 mx-auto my-4;
+  }
+
+  /* Stat bar */
+  .stat-bar-bg {
+    @apply h-1.5 bg-noir-100 rounded-full overflow-hidden;
+  }
+  .stat-bar-fill {
+    @apply h-full bg-gold-gradient rounded-full transition-all duration-700;
+  }
+}
+
+/* Animation utilitaire perspective */
+.perspective { perspective: 1000px; }
+.preserve-3d { transform-style: preserve-3d; }
+.backface-hidden { backface-visibility: hidden; }
+
+/* Shine sweep sur les cartes légendaires */
+.card-legendary-shine {
+  background-image: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(240, 208, 128, 0.18) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: shineSweep 2.5s ease-in-out infinite;
+}
+
+@keyframes shineSweep {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}

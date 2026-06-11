@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function isAuth()  { return request.auth != null; }
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isOwner(uid) { return isAuth() && request.auth.uid == uid; }
+
+    // ── Cartes : lecture publique (connecté), écriture admin ───────────────
+    match /cards/{cardId} {
+      allow read:  if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Boosters : lecture publique (connecté), écriture admin ────────────
+    match /boosters/{boosterId} {
+      allow read:  if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Utilisateurs ──────────────────────────────────────────────────────
+    match /users/{uid} {
+      // Lecture : owner ou admin
+      allow read: if isOwner(uid) || isAdmin();
+
+      // Création : seulement lors de l'inscription (son propre profil)
+      allow create: if isOwner(uid) &&
+        request.resource.data.role == 'user';
+
+      // Mise à jour des points/timestamps : owner autorisé (sauf changement de rôle)
+      allow update: if (isOwner(uid) && !('role' in request.resource.data.diff(resource.data).affectedKeys()))
+        || isAdmin();
+
+      // Sous-collection collection de cartes
+      match /collection/{cardId} {
+        allow read:   if isOwner(uid) || isAdmin();
+        allow write:  if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // ── Historique des ouvertures ─────────────────────────────────────────
+    match /packs/{packId} {
+      allow create: if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow read:   if isAdmin() ||
+        (isAuth() && resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+  }
+}
