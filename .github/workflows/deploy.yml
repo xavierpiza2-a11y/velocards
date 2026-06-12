@@ -46,5 +46,3 @@ jobs:
           accountId:   ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: velocards
           directory:   dist
-          # Sur les PR : prévisualisation ; sur main : production
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
