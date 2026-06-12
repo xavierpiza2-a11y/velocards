@@ -1,21 +1,21 @@
-cardNumber,name,team,nationality,speciality,rarity,season,ftp,sprint,climbing,endurance,ttRating,imageUrl
-UCI-2025-001,Tadej Pogačar,UAE Team Emirates,SVN,gc,legendary,2025,6.2,1450,97,96,94,
-UCI-2025-002,Jonas Vingegaard,Visma Lease a Bike,DEN,gc,legendary,2025,6.1,1280,96,97,93,
-UCI-2025-003,Wout van Aert,Visma Lease a Bike,BEL,rouleur,epic,2025,5.8,1820,82,94,88,
-UCI-2025-004,Remco Evenepoel,Soudal Quick-Step,BEL,gc,epic,2025,5.9,1380,88,91,97,
-UCI-2025-005,Primož Roglič,Red Bull Bora Hansgrohe,SVN,gc,epic,2025,5.8,1320,89,92,91,
-UCI-2025-006,Tom Pidcock,INEOS Grenadiers,GBR,climber,epic,2025,5.7,1290,93,88,82,
-UCI-2025-007,Giulio Ciccone,Lidl Trek,ITA,climber,rare,2025,5.5,1180,90,84,74,
-UCI-2025-008,Romain Bardet,Team dsm-firmenich PostNL,FRA,climber,rare,2025,5.4,1120,88,85,76,
-UCI-2025-009,Stefan Küng,Groupama-FDJ,SUI,rouleur,rare,2025,5.6,1350,72,88,92,
-UCI-2025-010,Filippo Ganna,INEOS Grenadiers,ITA,rouleur,rare,2025,5.5,1680,65,85,96,
-UCI-2025-011,Christophe Laporte,Visma Lease a Bike,FRA,sprinter,rare,2025,5.2,1780,58,86,72,
-UCI-2025-012,Jasper Philipsen,Alpecin-Deceuninck,BEL,sprinter,rare,2025,5.0,1920,45,82,60,
-UCI-2025-013,David Gaudu,Groupama-FDJ,FRA,climber,common,2025,5.3,1150,84,82,72,
-UCI-2025-014,Thibaut Pinot,Groupama-FDJ,FRA,climber,common,2025,5.2,1100,86,80,68,
-UCI-2025-015,Guillaume Martin,Cofidis,FRA,climber,common,2025,5.1,1080,83,79,66,
-UCI-2025-016,Benoît Cosnefroy,Decathlon AG2R La Mondiale,FRA,puncheur,common,2025,5.2,1420,76,81,70,
-UCI-2025-017,Valentin Madouas,Groupama-FDJ,FRA,puncheur,common,2025,5.1,1380,74,80,69,
-UCI-2025-018,Nils Politt,Red Bull Bora Hansgrohe,GER,rouleur,common,2025,5.0,1520,60,83,74,
-UCI-2025-019,Alex Aranburu,Movistar Team,ESP,puncheur,common,2025,5.0,1460,72,79,67,
-UCI-2025-020,Mattias Skjelmose,Lidl Trek,DEN,gc,common,2025,5.3,1200,82,83,78,
+cardNumber;name;team;nationality;speciality;rarity;season;ftp;sprint;climbing;endurance;ttRating;imageUrl
+UCI-2025-001;Tadej Pogačar;UAE Team Emirates;SVN;gc;legendary;2025;6.2;1450;97;96;94;
+UCI-2025-002;Jonas Vingegaard;Visma Lease a Bike;DEN;gc;legendary;2025;6.1;1280;96;97;93;
+UCI-2025-003;Wout van Aert;Visma Lease a Bike;BEL;rouleur;epic;2025;5.8;1820;82;94;88;
+UCI-2025-004;Remco Evenepoel;Soudal Quick-Step;BEL;gc;epic;2025;5.9;1380;88;91;97;
+UCI-2025-005;Primož Roglič;Red Bull Bora Hansgrohe;SVN;gc;epic;2025;5.8;1320;89;92;91;
+UCI-2025-006;Tom Pidcock;INEOS Grenadiers;GBR;climber;epic;2025;5.7;1290;93;88;82;
+UCI-2025-007;Giulio Ciccone;Lidl Trek;ITA;climber;rare;2025;5.5;1180;90;84;74;
+UCI-2025-008;Romain Bardet;Team dsm-firmenich PostNL;FRA;climber;rare;2025;5.4;1120;88;85;76;
+UCI-2025-009;Stefan Küng;Groupama-FDJ;SUI;rouleur;rare;2025;5.6;1350;72;88;92;
+UCI-2025-010;Filippo Ganna;INEOS Grenadiers;ITA;rouleur;rare;2025;5.5;1680;65;85;96;
+UCI-2025-011;Christophe Laporte;Visma Lease a Bike;FRA;sprinter;rare;2025;5.2;1780;58;86;72;
+UCI-2025-012;Jasper Philipsen;Alpecin-Deceuninck;BEL;sprinter;rare;2025;5.0;1920;45;82;60;
+UCI-2025-013;David Gaudu;Groupama-FDJ;FRA;climber;common;2025;5.3;1150;84;82;72;
+UCI-2025-014;Thibaut Pinot;Groupama-FDJ;FRA;climber;common;2025;5.2;1100;86;80;68;
+UCI-2025-015;Guillaume Martin;Cofidis;FRA;climber;common;2025;5.1;1080;83;79;66;
+UCI-2025-016;Benoît Cosnefroy;Decathlon AG2R La Mondiale;FRA;puncheur;common;2025;5.2;1420;76;81;70;
+UCI-2025-017;Valentin Madouas;Groupama-FDJ;FRA;puncheur;common;2025;5.1;1380;74;80;69;
+UCI-2025-018;Nils Politt;Red Bull Bora Hansgrohe;GER;rouleur;common;2025;5.0;1520;60;83;74;
+UCI-2025-019;Alex Aranburu;Movistar Team;ESP;puncheur;common;2025;5.0;1460;72;79;67;
+UCI-2025-020;Mattias Skjelmose;Lidl Trek;DEN;gc;common;2025;5.3;1200;82;83;78;
