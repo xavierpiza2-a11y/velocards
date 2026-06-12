@@ -1,4 +1,4 @@
-cardNumber;name;team;nationality;speciality;rarity;season;ftp;sprint;climbing;endurance;ttRating;imageUrl
+﻿cardNumber;name;team;nationality;speciality;rarity;season;ftp;sprint;climbing;endurance;ttRating;imageUrl
 UCI-2025-001;Tadej Pogačar;UAE Team Emirates;SVN;gc;legendary;2025;6.2;1450;97;96;94;
 UCI-2025-002;Jonas Vingegaard;Visma Lease a Bike;DEN;gc;legendary;2025;6.1;1280;96;97;93;
 UCI-2025-003;Wout van Aert;Visma Lease a Bike;BEL;rouleur;epic;2025;5.8;1820;82;94;88;
