@@ -70,7 +70,7 @@ export default function CyclistCard({ card, revealed = true, size = 'md', classN
           <img
             src={card.imageUrl}
             alt={card.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-top"
           />
         ) : (
           <div className="text-center">
