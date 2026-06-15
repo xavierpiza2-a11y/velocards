@@ -4,6 +4,7 @@ import {
   previewImport, executeImport,
   exportCardsToCSV, exportStatsToCSV, downloadCSV,
 } from '@/lib/csvImport'
+import { fetchRidersFromPCS, cardsToCSV } from '@/lib/pcsSync'
 import CyclistCard from '@/components/cards/CyclistCard'
 import toast from 'react-hot-toast'
 
@@ -15,9 +16,9 @@ const EMPTY_CARD = {
 const RARITIES     = ['common', 'rare', 'epic', 'legendary']
 const SPECIALITIES = ['climber', 'sprinter', 'rouleur', 'puncheur', 'gc']
 
-// ── Modal Import CSV ─────────────────────────────────────────────────────────
+// ── Modal Import CSV ──────────────────────────────────────────────────────────
 function ImportModal({ onClose, onDone }) {
-  const [step, setStep]         = useState('pick')   // pick → preview → importing → done
+  const [step, setStep]         = useState('pick')
   const [preview, setPreview]   = useState(null)
   const [progress, setProgress] = useState(0)
   const [result, setResult]     = useState(null)
@@ -57,11 +58,9 @@ function ImportModal({ onClose, onDone }) {
       <div className="bg-noir-100 border border-gold-400/40 rounded-2xl w-full max-w-lg p-6 relative">
         <button onClick={onClose}
           className="absolute top-4 right-4 text-gold-400/40 hover:text-gold-400 font-mono text-lg">✕</button>
-
         <p className="font-mono text-[10px] tracking-[4px] text-gold-400/40 mb-1">ADMINISTRATION</p>
         <h2 className="font-display text-xl tracking-widest text-gold-200 mb-6">IMPORTER CSV</h2>
 
-        {/* ── Sélection fichier ── */}
         {step === 'pick' && (
           <div className="text-center space-y-4">
             <div className="border-2 border-dashed rounded-xl p-10 cursor-pointer hover:border-gold-400/60 transition-colors"
@@ -83,22 +82,19 @@ function ImportModal({ onClose, onDone }) {
           </div>
         )}
 
-        {/* ── Chargement ── */}
         {step === 'loading' && (
           <div className="text-center py-10">
             <div className="font-mono text-xs tracking-[4px] text-gold-400/50 animate-pulse">ANALYSE EN COURS...</div>
           </div>
         )}
 
-        {/* ── Prévisualisation ── */}
         {step === 'preview' && preview && (
           <div className="space-y-4">
-            {/* Résumé */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'À CRÉER',    value: preview.toCreate.length, color: 'text-green-400' },
-                { label: 'À METTRE À JOUR', value: preview.toUpdate.length, color: 'text-gold-400' },
-                { label: 'ERREURS',    value: preview.errors.length,  color: 'text-red-400' },
+                { label: 'À CRÉER',          value: preview.toCreate.length, color: 'text-green-400' },
+                { label: 'À METTRE À JOUR',  value: preview.toUpdate.length, color: 'text-gold-400'  },
+                { label: 'ERREURS',           value: preview.errors.length,  color: 'text-red-400'   },
               ].map(({ label, value, color }) => (
                 <div key={label} className="panel text-center">
                   <div className={`font-display text-2xl ${color}`}>{value}</div>
@@ -106,8 +102,6 @@ function ImportModal({ onClose, onDone }) {
                 </div>
               ))}
             </div>
-
-            {/* Erreurs */}
             {preview.errors.length > 0 && (
               <div className="bg-red-950/40 border border-red-800/40 rounded-lg p-3 max-h-32 overflow-y-auto">
                 {preview.errors.map((e, i) => (
@@ -115,13 +109,9 @@ function ImportModal({ onClose, onDone }) {
                 ))}
               </div>
             )}
-
-            {/* Aperçu cartes à créer */}
             {preview.toCreate.length > 0 && (
               <div>
-                <p className="font-mono text-[10px] tracking-widest text-gold-400/40 mb-2">
-                  NOUVELLES CARTES (aperçu)
-                </p>
+                <p className="font-mono text-[10px] tracking-widest text-gold-400/40 mb-2">APERÇU</p>
                 <div className="flex gap-2 flex-wrap max-h-40 overflow-y-auto">
                   {preview.toCreate.slice(0, 6).map((c, i) => (
                     <CyclistCard key={i} card={c} revealed size="sm" />
@@ -134,14 +124,214 @@ function ImportModal({ onClose, onDone }) {
                 </div>
               </div>
             )}
-
             <div className="flex gap-3 pt-2">
               <button onClick={onClose} className="btn-ghost">Annuler</button>
-              <button
-                onClick={handleConfirm}
+              <button onClick={handleConfirm}
                 disabled={preview.toCreate.length + preview.toUpdate.length === 0}
                 className="btn-gold flex-1">
-                CONFIRMER L'IMPORT ({preview.toCreate.length + preview.toUpdate.length} cartes)
+                CONFIRMER ({preview.toCreate.length + preview.toUpdate.length} cartes)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'importing' && (
+          <div className="text-center py-8 space-y-4">
+            <div className="font-mono text-xs tracking-[4px] text-gold-400/50 animate-pulse">IMPORT EN COURS...</div>
+            <div className="stat-bar-bg mx-8">
+              <div className="stat-bar-fill transition-all duration-300" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="font-display text-2xl text-gold-400">{progress}%</div>
+          </div>
+        )}
+
+        {step === 'done' && result && (
+          <div className="text-center space-y-4 py-4">
+            <div className="text-5xl">✅</div>
+            <p className="font-display text-xl tracking-widest text-gold-200">IMPORT RÉUSSI</p>
+            <div className="panel inline-block px-8 py-3">
+              <p className="font-mono text-sm text-green-400">+{result.created} créées</p>
+              <p className="font-mono text-sm text-gold-400">↑ {result.updated} mises à jour</p>
+            </div>
+            <button onClick={onClose} className="btn-gold block w-full mt-2">FERMER</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Modal Sync ProCyclingStats ────────────────────────────────────────────────
+function SyncModal({ onClose, onDone }) {
+  const [season,   setSeason]   = useState(2025)
+  const [step,     setStep]     = useState('config')
+  const [message,  setMessage]  = useState('')
+  const [riders,   setRiders]   = useState([])
+  const [progress, setProgress] = useState(0)
+  const [result,   setResult]   = useState(null)
+
+  const handleFetch = async () => {
+    setStep('loading')
+    try {
+      const data = await fetchRidersFromPCS(season, setMessage)
+      setRiders(data)
+      setStep('preview')
+    } catch (err) {
+      toast.error(err.message)
+      setStep('config')
+    }
+  }
+
+  const handleDownload = () => {
+    const csv  = cardsToCSV(riders)
+    const BOM  = '\uFEFF'
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `velocards-pcs-${season}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('CSV téléchargé !')
+  }
+
+  const handleImport = async () => {
+    setStep('importing')
+    const total = riders.length
+    let done = 0
+    try {
+      const existing = await getAllCards()
+      const byNum    = Object.fromEntries(existing.map(c => [c.cardNumber, c]))
+      for (const card of riders) {
+        if (byNum[card.cardNumber]) {
+          await updateCard(byNum[card.cardNumber].id, card)
+        } else {
+          await createCard(card)
+        }
+        done++
+        setProgress(Math.round((done / total) * 100))
+      }
+      setResult({
+        created: riders.filter(r => !byNum[r.cardNumber]).length,
+        updated: riders.filter(r =>  !!byNum[r.cardNumber]).length,
+      })
+      setStep('done')
+      onDone?.()
+    } catch (err) {
+      toast.error(err.message)
+      setStep('preview')
+    }
+  }
+
+  const rarityColors = {
+    legendary: 'text-gold-200',
+    epic:      'text-purple-400',
+    rare:      'text-blue-400',
+    common:    'text-gray-400',
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+      <div className="bg-noir-100 border border-gold-400/40 rounded-2xl w-full max-w-lg p-6 relative">
+        <button onClick={onClose}
+          className="absolute top-4 right-4 text-gold-400/40 hover:text-gold-400 font-mono text-lg">✕</button>
+
+        <p className="font-mono text-[10px] tracking-[4px] text-gold-400/40 mb-1">PROCYCLINGSTATS</p>
+        <h2 className="font-display text-xl tracking-widest text-gold-200 mb-1">SYNCHRONISATION API</h2>
+        <p className="font-body text-xs text-gold-400/30 mb-6">
+          Récupère les coureurs UCI WorldTour depuis ProCyclingStats
+        </p>
+
+        {/* ── Config ── */}
+        {step === 'config' && (
+          <div className="space-y-6">
+            <div>
+              <label className="field-label">SAISON</label>
+              <div className="flex gap-2">
+                {[2025, 2024, 2023].map(s => (
+                  <button key={s} onClick={() => setSeason(s)}
+                    className={`flex-1 py-2.5 rounded-lg font-mono text-sm tracking-widest transition-all ${
+                      season === s
+                        ? 'bg-gold-400 text-noir-900'
+                        : 'bg-noir-50 text-gold-400/50 hover:text-gold-400'
+                    }`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="panel space-y-1.5">
+              <p className="font-mono text-[10px] tracking-widest text-gold-400/40 mb-2">
+                CE QUE FAIT CETTE SYNCHRO
+              </p>
+              {[
+                `Récupère tous les coureurs du Tour de France ${season}`,
+                'Génère les raretés selon le classement UCI',
+                'Propose de télécharger le CSV ou d\'importer directement',
+                'Met à jour les cartes existantes (par numéro)',
+              ].map((txt, i) => (
+                <p key={i} className="text-xs text-gold-400/50 font-body">
+                  <span className="text-gold-400 mr-1">✓</span>{txt}
+                </p>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={onClose} className="btn-ghost">Annuler</button>
+              <button onClick={handleFetch} className="btn-gold flex-1">
+                🔄 SYNCHRONISER {season}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Chargement ── */}
+        {step === 'loading' && (
+          <div className="text-center py-10 space-y-4">
+            <div className="text-4xl animate-spin inline-block">🔄</div>
+            <p className="font-mono text-xs tracking-[3px] text-gold-400/50 animate-pulse">
+              {message || 'CONNEXION À PROCYCLINGSTATS...'}
+            </p>
+          </div>
+        )}
+
+        {/* ── Prévisualisation ── */}
+        {step === 'preview' && riders.length > 0 && (
+          <div className="space-y-4">
+            {/* Compteurs par rareté */}
+            <div className="grid grid-cols-4 gap-2">
+              {['legendary', 'epic', 'rare', 'common'].map(r => (
+                <div key={r} className="panel text-center py-2">
+                  <div className={`font-display text-xl ${rarityColors[r]}`}>
+                    {riders.filter(c => c.rarity === r).length}
+                  </div>
+                  <div className={`rarity-${r} rarity-badge mt-1`}>{r}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Aperçu des coureurs */}
+            <div className="panel max-h-48 overflow-y-auto space-y-1">
+              <p className="font-mono text-[9px] tracking-widest text-gold-400/40 mb-2 sticky top-0 bg-noir-50 pb-1">
+                {riders.length} COUREURS RÉCUPÉRÉS
+              </p>
+              {riders.map((c, i) => (
+                <div key={i} className="flex items-center gap-2 py-0.5">
+                  <span className={`rarity-${c.rarity} rarity-badge shrink-0`}>{c.rarity}</span>
+                  <span className="font-body text-xs text-gold-200 truncate">{c.name}</span>
+                  <span className="font-mono text-[9px] text-gold-400/30 truncate ml-auto">{c.team}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={onClose} className="btn-ghost text-sm">Annuler</button>
+              <button onClick={handleDownload} className="btn-outline-gold text-sm flex-1">
+                ↓ CSV
+              </button>
+              <button onClick={handleImport} className="btn-gold text-sm flex-1">
+                IMPORTER
               </button>
             </div>
           </div>
@@ -164,7 +354,7 @@ function ImportModal({ onClose, onDone }) {
         {step === 'done' && result && (
           <div className="text-center space-y-4 py-4">
             <div className="text-5xl">✅</div>
-            <p className="font-display text-xl tracking-widest text-gold-200">IMPORT RÉUSSI</p>
+            <p className="font-display text-xl tracking-widest text-gold-200">SYNCHRONISATION TERMINÉE</p>
             <div className="panel inline-block px-8 py-3">
               <p className="font-mono text-sm text-green-400">+{result.created} créées</p>
               <p className="font-mono text-sm text-gold-400">↑ {result.updated} mises à jour</p>
@@ -179,12 +369,13 @@ function ImportModal({ onClose, onDone }) {
 
 // ── Page principale AdminCards ────────────────────────────────────────────────
 export default function AdminCards() {
-  const [cards,    setCards]    = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [editing,  setEditing]  = useState(null)
-  const [form,     setForm]     = useState(EMPTY_CARD)
-  const [saving,   setSaving]   = useState(false)
+  const [cards,      setCards]      = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [editing,    setEditing]    = useState(null)
+  const [form,       setForm]       = useState(EMPTY_CARD)
+  const [saving,     setSaving]     = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [showSync,   setShowSync]   = useState(false)
   const [exporting,  setExporting]  = useState(false)
 
   useEffect(() => { load() }, [])
@@ -227,7 +418,7 @@ export default function AdminCards() {
   const handleExportCards = async () => {
     setExporting(true)
     try {
-      const csv = await exportCardsToCSV()
+      const csv  = await exportCardsToCSV()
       const date = new Date().toISOString().slice(0, 10)
       downloadCSV(csv, `velocards-export-${date}.csv`)
       toast.success('Export téléchargé !')
@@ -238,7 +429,7 @@ export default function AdminCards() {
   const handleExportStats = async () => {
     setExporting(true)
     try {
-      const csv = await exportStatsToCSV()
+      const csv  = await exportStatsToCSV()
       const date = new Date().toISOString().slice(0, 10)
       downloadCSV(csv, `velocards-stats-${date}.csv`)
       toast.success('Rapport téléchargé !')
@@ -249,7 +440,7 @@ export default function AdminCards() {
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }))
   const setStat  = (key, val) => setForm(f => ({ ...f, stats: { ...f.stats, [key]: Number(val) } }))
 
-  // ── Formulaire édition ───────────────────────────────────────────
+  // ── Formulaire édition ───────────────────────────────────────────────────
   if (editing !== null) {
     return (
       <div>
@@ -270,7 +461,7 @@ export default function AdminCards() {
               <div>
                 <label className="field-label">Équipe *</label>
                 <input className="input-gold" value={form.team}
-                  onChange={e => setField('team', e.target.value)} placeholder="UAE Team Emirates" />
+                  onChange={e => setField('team', e.target.value)} placeholder="UAE Team Emirates XRG" />
               </div>
               <div>
                 <label className="field-label">Nationalité (ISO)</label>
@@ -307,6 +498,7 @@ export default function AdminCards() {
                   onChange={e => setField('imageUrl', e.target.value)} placeholder="https://..." />
               </div>
             </div>
+
             <div className="panel">
               <p className="font-mono text-[10px] tracking-[3px] text-gold-400/50 mb-3">STATISTIQUES</p>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -331,6 +523,7 @@ export default function AdminCards() {
                 ))}
               </div>
             </div>
+
             <div className="flex gap-3">
               <button onClick={cancel} className="btn-ghost">Annuler</button>
               <button onClick={save} disabled={saving} className="btn-gold">
@@ -338,6 +531,7 @@ export default function AdminCards() {
               </button>
             </div>
           </div>
+
           <div className="flex flex-col items-center gap-2">
             <p className="font-mono text-[10px] tracking-[3px]" style={{ color: 'rgba(201,168,76,0.4)' }}>APERÇU</p>
             <CyclistCard card={form.name ? form : null} revealed size="lg" />
@@ -347,7 +541,7 @@ export default function AdminCards() {
     )
   }
 
-  // ── Liste + barre d'actions ──────────────────────────────────────
+  // ── Liste + barre d'actions ──────────────────────────────────────────────
   return (
     <div>
       {/* Header */}
@@ -359,27 +553,31 @@ export default function AdminCards() {
           </p>
         </div>
 
-        {/* Actions */}
         <div className="flex flex-wrap gap-2">
           {/* Export stats */}
           <button onClick={handleExportStats} disabled={exporting}
             className="btn-ghost text-xs flex items-center gap-1.5 border rounded-lg px-3 py-2"
-            style={{ borderColor: 'rgba(42,34,0,0.6)' }}
-            title="Exporter un rapport d'activité">
+            style={{ borderColor: 'rgba(42,34,0,0.6)' }}>
             📊 RAPPORT
           </button>
 
           {/* Export cartes */}
           <button onClick={handleExportCards} disabled={exporting}
             className="btn-ghost text-xs flex items-center gap-1.5 border rounded-lg px-3 py-2"
-            style={{ borderColor: 'rgba(42,34,0,0.6)' }}
-            title="Exporter toutes les cartes en CSV">
+            style={{ borderColor: 'rgba(42,34,0,0.6)' }}>
             ↓ EXPORTER CSV
           </button>
 
+          {/* Sync PCS */}
+          <button onClick={() => setShowSync(true)}
+            className="btn-ghost text-xs flex items-center gap-1.5 border rounded-lg px-3 py-2"
+            style={{ borderColor: 'rgba(42,34,0,0.6)' }}
+            title="Synchroniser depuis ProCyclingStats">
+            🔄 SYNC PCS
+          </button>
+
           {/* Import */}
-          <button onClick={() => setShowImport(true)}
-            className="btn-outline-gold text-xs px-4 py-2">
+          <button onClick={() => setShowImport(true)} className="btn-outline-gold text-xs px-4 py-2">
             ↑ IMPORTER CSV
           </button>
 
@@ -401,7 +599,11 @@ export default function AdminCards() {
           <p className="font-display text-xl tracking-widest" style={{ color: 'rgba(201,168,76,0.3)' }}>
             AUCUNE CARTE
           </p>
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button onClick={() => setShowSync(true)} className="btn-ghost text-sm border rounded-lg px-4 py-2"
+              style={{ borderColor: 'rgba(42,34,0,0.6)' }}>
+              🔄 Sync ProCyclingStats
+            </button>
             <button onClick={() => setShowImport(true)} className="btn-outline-gold text-sm">
               ↑ Importer un CSV
             </button>
@@ -428,10 +630,7 @@ export default function AdminCards() {
               <div className="flex gap-2 shrink-0">
                 <button onClick={() => openEdit(card)} className="btn-ghost text-xs py-1 px-2">ÉDITER</button>
                 <button onClick={() => remove(card.id)}
-                  className="font-mono text-[10px] px-2 py-1 rounded transition-colors"
-                  style={{ color: 'rgba(239,68,68,0.6)' }}
-                  onMouseEnter={e => e.target.style.color = '#f87171'}
-                  onMouseLeave={e => e.target.style.color = 'rgba(239,68,68,0.6)'}>
+                  className="font-mono text-[10px] px-2 py-1 rounded transition-colors text-red-500/60 hover:text-red-400">
                   ✕
                 </button>
               </div>
@@ -440,12 +639,12 @@ export default function AdminCards() {
         </div>
       )}
 
-      {/* Modal import */}
+      {/* Modals */}
+      {showSync && (
+        <SyncModal onClose={() => setShowSync(false)} onDone={load} />
+      )}
       {showImport && (
-        <ImportModal
-          onClose={() => setShowImport(false)}
-          onDone={load}
-        />
+        <ImportModal onClose={() => setShowImport(false)} onDone={load} />
       )}
     </div>
   )
