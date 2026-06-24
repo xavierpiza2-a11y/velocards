@@ -1,3 +1,4 @@
+// src/pages/admin/AdminCards.jsx
 import { useEffect, useState, useRef } from 'react'
 import { getAllCards, createCard, updateCard, deleteCard } from '@/lib/firestore'
 import {
@@ -5,6 +6,7 @@ import {
   exportCardsToCSV, exportStatsToCSV, downloadCSV,
 } from '@/lib/csvImport'
 import { fetchRidersFromPCS, cardsToCSV } from '@/lib/pcsSync'
+import { uploadCardImage } from '@/lib/storageHelpers'
 import CyclistCard from '@/components/cards/CyclistCard'
 import toast from 'react-hot-toast'
 
@@ -15,6 +17,131 @@ const EMPTY_CARD = {
 }
 const RARITIES     = ['common', 'rare', 'epic', 'legendary']
 const SPECIALITIES = ['climber', 'sprinter', 'rouleur', 'puncheur', 'gc']
+
+// ── Composant upload image ────────────────────────────────────────────────────
+function ImageUploader({ cardNumber, currentUrl, onUploaded }) {
+  const [uploading, setUploading] = useState(false)
+  const [preview,   setPreview]   = useState(currentUrl || '')
+  const fileRef = useRef()
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Prévisualisation locale immédiate
+    const localUrl = URL.createObjectURL(file)
+    setPreview(localUrl)
+
+    if (!cardNumber) {
+      toast.error('Renseignez d\'abord le numéro de carte avant d\'uploader une image')
+      setPreview(currentUrl || '')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const url = await uploadCardImage(cardNumber, file)
+      setPreview(url)
+      onUploaded(url)
+      toast.success('Image uploadée !')
+    } catch (err) {
+      toast.error(err.message)
+      setPreview(currentUrl || '')
+    } finally {
+      setUploading(false)
+      URL.revokeObjectURL(localUrl)
+    }
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      // Simuler un event natif
+      const dt = new DataTransfer()
+      dt.items.add(file)
+      fileRef.current.files = dt.files
+      handleFile({ target: { files: [file] } })
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="field-label">Image du coureur</label>
+
+      {/* Zone drag & drop */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={e => e.preventDefault()}
+        onClick={() => !uploading && fileRef.current?.click()}
+        className={`
+          relative border-2 border-dashed rounded-xl overflow-hidden
+          flex items-center justify-center cursor-pointer
+          transition-all duration-200
+          ${uploading ? 'opacity-60 cursor-not-allowed' : 'hover:border-gold-400/60'}
+        `}
+        style={{ borderColor: 'rgba(201,168,76,0.25)', minHeight: '120px' }}
+      >
+        {preview ? (
+          <>
+            <img
+              src={preview}
+              alt="Aperçu"
+              className="w-full h-32 object-cover object-top"
+            />
+            {/* Overlay au survol */}
+            <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="font-mono text-[10px] tracking-widest text-gold-400">
+                CHANGER L'IMAGE
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="text-center p-6">
+            <div className="text-3xl mb-2">🖼️</div>
+            <p className="font-mono text-[10px] tracking-widest text-gold-400/40">
+              {uploading ? 'UPLOAD EN COURS...' : 'GLISSER-DÉPOSER OU CLIQUER'}
+            </p>
+            <p className="font-body text-[10px] text-gold-400/25 mt-1">
+              JPG, PNG, WEBP · max 3 Mo
+            </p>
+          </div>
+        )}
+
+        {uploading && (
+          <div className="absolute inset-0 bg-noir-400/70 flex items-center justify-center">
+            <div className="font-mono text-xs text-gold-400 animate-pulse tracking-widest">
+              UPLOAD...
+            </div>
+          </div>
+        )}
+      </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFile}
+        disabled={uploading}
+      />
+
+      {/* Champ URL manuel (fallback / import CSV) */}
+      <div>
+        <label className="field-label">— ou coller une URL d'image</label>
+        <input
+          className="input-gold"
+          placeholder="https://example.com/photo.jpg"
+          value={preview}
+          onChange={e => {
+            setPreview(e.target.value)
+            onUploaded(e.target.value)
+          }}
+        />
+      </div>
+    </div>
+  )
+}
 
 // ── Modal Import CSV ──────────────────────────────────────────────────────────
 function ImportModal({ onClose, onDone }) {
@@ -63,15 +190,20 @@ function ImportModal({ onClose, onDone }) {
 
         {step === 'pick' && (
           <div className="text-center space-y-4">
-            <div className="border-2 border-dashed rounded-xl p-10 cursor-pointer hover:border-gold-400/60 transition-colors"
+            <div
+              className="border-2 border-dashed rounded-xl p-10 cursor-pointer hover:border-gold-400/60 transition-colors"
               style={{ borderColor: 'rgba(201,168,76,0.2)' }}
-              onClick={() => fileRef.current?.click()}>
+              onClick={() => fileRef.current?.click()}
+            >
               <div className="text-4xl mb-3">📄</div>
               <p className="font-mono text-xs tracking-widest text-gold-400/50">
                 CLIQUER POUR SÉLECTIONNER UN FICHIER .CSV
               </p>
               <p className="font-body text-[11px] text-gold-400/30 mt-2">
                 Séparateur virgule ou point-virgule · UTF-8
+              </p>
+              <p className="font-body text-[10px] text-gold-400/20 mt-1">
+                La colonne <code className="text-gold-400/40">imageUrl</code> accepte des URLs d'images externes
               </p>
             </div>
             <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
@@ -92,9 +224,9 @@ function ImportModal({ onClose, onDone }) {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'À CRÉER',          value: preview.toCreate.length, color: 'text-green-400' },
-                { label: 'À METTRE À JOUR',  value: preview.toUpdate.length, color: 'text-gold-400'  },
-                { label: 'ERREURS',           value: preview.errors.length,  color: 'text-red-400'   },
+                { label: 'À CRÉER',         value: preview.toCreate.length, color: 'text-green-400' },
+                { label: 'À METTRE À JOUR', value: preview.toUpdate.length, color: 'text-gold-400'  },
+                { label: 'ERREURS',          value: preview.errors.length,  color: 'text-red-400'   },
               ].map(({ label, value, color }) => (
                 <div key={label} className="panel text-center">
                   <div className={`font-display text-2xl ${color}`}>{value}</div>
@@ -242,7 +374,6 @@ function SyncModal({ onClose, onDone }) {
           Récupère les coureurs UCI WorldTour depuis ProCyclingStats
         </p>
 
-        {/* ── Config ── */}
         {step === 'config' && (
           <div className="space-y-6">
             <div>
@@ -251,20 +382,15 @@ function SyncModal({ onClose, onDone }) {
                 {[2025, 2024, 2023].map(s => (
                   <button key={s} onClick={() => setSeason(s)}
                     className={`flex-1 py-2.5 rounded-lg font-mono text-sm tracking-widest transition-all ${
-                      season === s
-                        ? 'bg-gold-400 text-noir-900'
-                        : 'bg-noir-50 text-gold-400/50 hover:text-gold-400'
+                      season === s ? 'bg-gold-400 text-noir-900' : 'bg-noir-50 text-gold-400/50 hover:text-gold-400'
                     }`}>
                     {s}
                   </button>
                 ))}
               </div>
             </div>
-
             <div className="panel space-y-1.5">
-              <p className="font-mono text-[10px] tracking-widest text-gold-400/40 mb-2">
-                CE QUE FAIT CETTE SYNCHRO
-              </p>
+              <p className="font-mono text-[10px] tracking-widest text-gold-400/40 mb-2">CE QUE FAIT CETTE SYNCHRO</p>
               {[
                 `Récupère tous les coureurs du Tour de France ${season}`,
                 'Génère les raretés selon le classement UCI',
@@ -276,7 +402,6 @@ function SyncModal({ onClose, onDone }) {
                 </p>
               ))}
             </div>
-
             <div className="flex gap-3">
               <button onClick={onClose} className="btn-ghost">Annuler</button>
               <button onClick={handleFetch} className="btn-gold flex-1">
@@ -286,7 +411,6 @@ function SyncModal({ onClose, onDone }) {
           </div>
         )}
 
-        {/* ── Chargement ── */}
         {step === 'loading' && (
           <div className="text-center py-10 space-y-4">
             <div className="text-4xl animate-spin inline-block">🔄</div>
@@ -296,10 +420,8 @@ function SyncModal({ onClose, onDone }) {
           </div>
         )}
 
-        {/* ── Prévisualisation ── */}
         {step === 'preview' && riders.length > 0 && (
           <div className="space-y-4">
-            {/* Compteurs par rareté */}
             <div className="grid grid-cols-4 gap-2">
               {['legendary', 'epic', 'rare', 'common'].map(r => (
                 <div key={r} className="panel text-center py-2">
@@ -310,8 +432,6 @@ function SyncModal({ onClose, onDone }) {
                 </div>
               ))}
             </div>
-
-            {/* Aperçu des coureurs */}
             <div className="panel max-h-48 overflow-y-auto space-y-1">
               <p className="font-mono text-[9px] tracking-widest text-gold-400/40 mb-2 sticky top-0 bg-noir-50 pb-1">
                 {riders.length} COUREURS RÉCUPÉRÉS
@@ -324,25 +444,17 @@ function SyncModal({ onClose, onDone }) {
                 </div>
               ))}
             </div>
-
             <div className="flex gap-2">
               <button onClick={onClose} className="btn-ghost text-sm">Annuler</button>
-              <button onClick={handleDownload} className="btn-outline-gold text-sm flex-1">
-                ↓ CSV
-              </button>
-              <button onClick={handleImport} className="btn-gold text-sm flex-1">
-                IMPORTER
-              </button>
+              <button onClick={handleDownload} className="btn-outline-gold text-sm flex-1">↓ CSV</button>
+              <button onClick={handleImport} className="btn-gold text-sm flex-1">IMPORTER</button>
             </div>
           </div>
         )}
 
-        {/* ── Import en cours ── */}
         {step === 'importing' && (
           <div className="text-center py-8 space-y-4">
-            <div className="font-mono text-xs tracking-[4px] text-gold-400/50 animate-pulse">
-              IMPORT EN COURS...
-            </div>
+            <div className="font-mono text-xs tracking-[4px] text-gold-400/50 animate-pulse">IMPORT EN COURS...</div>
             <div className="stat-bar-bg mx-8">
               <div className="stat-bar-fill transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
@@ -350,7 +462,6 @@ function SyncModal({ onClose, onDone }) {
           </div>
         )}
 
-        {/* ── Terminé ── */}
         {step === 'done' && result && (
           <div className="text-center space-y-4 py-4">
             <div className="text-5xl">✅</div>
@@ -450,8 +561,11 @@ export default function AdminCards() {
             {editing === 'new' ? 'NOUVELLE CARTE' : 'MODIFIER LA CARTE'}
           </h2>
         </div>
+
         <div className="grid lg:grid-cols-[1fr_auto] gap-6">
           <div className="space-y-4">
+
+            {/* Infos de base */}
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
                 <label className="field-label">Nom du coureur *</label>
@@ -492,13 +606,18 @@ export default function AdminCards() {
                 <input className="input-gold" type="number" value={form.season}
                   onChange={e => setField('season', Number(e.target.value))} />
               </div>
-              <div>
-                <label className="field-label">Image URL</label>
-                <input className="input-gold" value={form.imageUrl}
-                  onChange={e => setField('imageUrl', e.target.value)} placeholder="https://..." />
-              </div>
             </div>
 
+            {/* ── Upload image ── */}
+            <div className="panel">
+              <ImageUploader
+                cardNumber={form.cardNumber}
+                currentUrl={form.imageUrl}
+                onUploaded={url => setField('imageUrl', url)}
+              />
+            </div>
+
+            {/* Stats */}
             <div className="panel">
               <p className="font-mono text-[10px] tracking-[3px] text-gold-400/50 mb-3">STATISTIQUES</p>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -532,6 +651,7 @@ export default function AdminCards() {
             </div>
           </div>
 
+          {/* Aperçu carte */}
           <div className="flex flex-col items-center gap-2">
             <p className="font-mono text-[10px] tracking-[3px]" style={{ color: 'rgba(201,168,76,0.4)' }}>APERÇU</p>
             <CyclistCard card={form.name ? form : null} revealed size="lg" />
@@ -554,41 +674,31 @@ export default function AdminCards() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* Export stats */}
           <button onClick={handleExportStats} disabled={exporting}
             className="btn-ghost text-xs flex items-center gap-1.5 border rounded-lg px-3 py-2"
             style={{ borderColor: 'rgba(42,34,0,0.6)' }}>
             📊 RAPPORT
           </button>
-
-          {/* Export cartes */}
           <button onClick={handleExportCards} disabled={exporting}
             className="btn-ghost text-xs flex items-center gap-1.5 border rounded-lg px-3 py-2"
             style={{ borderColor: 'rgba(42,34,0,0.6)' }}>
             ↓ EXPORTER CSV
           </button>
-
-          {/* Sync PCS */}
           <button onClick={() => setShowSync(true)}
             className="btn-ghost text-xs flex items-center gap-1.5 border rounded-lg px-3 py-2"
-            style={{ borderColor: 'rgba(42,34,0,0.6)' }}
-            title="Synchroniser depuis ProCyclingStats">
+            style={{ borderColor: 'rgba(42,34,0,0.6)' }}>
             🔄 SYNC PCS
           </button>
-
-          {/* Import */}
           <button onClick={() => setShowImport(true)} className="btn-outline-gold text-xs px-4 py-2">
             ↑ IMPORTER CSV
           </button>
-
-          {/* Nouvelle carte */}
           <button onClick={openNew} className="btn-gold text-xs px-4 py-2">
             + NOUVELLE CARTE
           </button>
         </div>
       </div>
 
-      {/* Liste */}
+      {/* Liste des cartes */}
       {loading ? (
         <div className="text-center py-10 font-mono text-xs animate-pulse tracking-widest"
           style={{ color: 'rgba(201,168,76,0.4)' }}>
@@ -617,6 +727,17 @@ export default function AdminCards() {
           {cards.map(card => (
             <div key={card.id}
               className="panel flex items-center gap-4 hover:border-gold-400/40 transition-colors">
+
+              {/* Miniature image */}
+              <div className="w-8 h-10 rounded overflow-hidden bg-noir-200 shrink-0 flex items-center justify-center">
+                {card.imageUrl ? (
+                  <img src={card.imageUrl} alt={card.name}
+                    className="w-full h-full object-cover object-top" />
+                ) : (
+                  <span className="text-gold-400/20 text-xs">🚴</span>
+                )}
+              </div>
+
               <div className={`rarity-${card.rarity} rarity-badge shrink-0`}>{card.rarity}</div>
               <div className="flex-1 min-w-0">
                 <div className="font-body text-sm text-gold-200 truncate">{card.name}</div>
@@ -639,13 +760,8 @@ export default function AdminCards() {
         </div>
       )}
 
-      {/* Modals */}
-      {showSync && (
-        <SyncModal onClose={() => setShowSync(false)} onDone={load} />
-      )}
-      {showImport && (
-        <ImportModal onClose={() => setShowImport(false)} onDone={load} />
-      )}
+      {showSync && <SyncModal onClose={() => setShowSync(false)} onDone={load} />}
+      {showImport && <ImportModal onClose={() => setShowImport(false)} onDone={load} />}
     </div>
   )
 }
